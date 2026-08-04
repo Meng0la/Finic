@@ -18,44 +18,44 @@ export function TransactionsList({
   categories: Category[];
 }) {
   if (transactions.length === 0) {
-    return <p className="text-sm text-zinc-500">Nenhum lançamento neste período.</p>;
+    return <p className="text-sm text-ink-muted">Nenhum lançamento neste período.</p>;
   }
 
   const accountName = (id: string) => accounts.find((a) => a.id === id)?.nome ?? "—";
   const categoryName = (id: string | null) => categories.find((c) => c.id === id)?.nome ?? "—";
 
   return (
-    <ul className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+    <ul className="surface-card flex flex-col divide-y divide-border-soft overflow-hidden">
       {transactions.map((t) => (
-        <li key={t.id} className="flex items-center justify-between px-4 py-3">
+        <li key={t.id} className="flex items-center justify-between px-6 py-4">
           <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+            <p className="text-sm font-medium text-ink">
               {t.descricao || TIPO_LABELS[t.tipo]}
               {t.status === "estornado" && (
-                <span className="ml-2 text-xs text-zinc-400">(estornado)</span>
+                <span className="ml-2 text-xs text-ink-muted">(estornado)</span>
               )}
               {t.parcelas_total && (
-                <span className="ml-2 text-xs text-zinc-400">
+                <span className="ml-2 text-xs text-ink-muted">
                   {t.parcela_atual}/{t.parcelas_total}
                 </span>
               )}
             </p>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-ink-muted">
               {new Date(`${t.data}T00:00:00`).toLocaleDateString("pt-BR")} · {accountName(t.account_id)}
               {t.tipo !== "transferencia" && ` · ${categoryName(t.category_id)}`}
               {t.origem === "whatsapp" && " · via WhatsApp"}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <span
-              className={`text-sm font-medium ${
+              className={`font-display text-base font-semibold ${
                 t.status === "estornado"
-                  ? "text-zinc-400 line-through"
+                  ? "text-ink-muted line-through"
                   : t.tipo === "receita"
-                    ? "text-green-600"
+                    ? "text-emerald"
                     : t.tipo === "despesa"
-                      ? "text-red-600"
-                      : "text-zinc-900 dark:text-zinc-50"
+                      ? "text-wine"
+                      : "text-ink"
               }`}
             >
               {t.tipo === "despesa" ? "-" : t.tipo === "receita" ? "+" : ""}
@@ -68,7 +68,7 @@ export function TransactionsList({
                   await reverseTransaction(t.id);
                 }}
               >
-                <button type="submit" className="text-xs text-zinc-500 hover:text-red-600">
+                <button type="submit" className="text-xs font-medium text-ink-muted hover:text-wine">
                   Estornar
                 </button>
               </form>

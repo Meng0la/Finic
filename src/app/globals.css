@@ -1,26 +1,152 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --canvas: #f6f4ef;
+  --surface: #ffffff;
+  --surface-alt: #fbfaf6;
+  --border: #e4ddcc;
+  --border-soft: #ece6d8;
+  --ink: #16213a;
+  --ink-muted: #636b80;
+  --navy: #0e1a30;
+  --navy-hover: #18264c;
+  --gold: #a3813c;
+  --gold-soft: #d8c290;
+  --gold-strong: #7e5f28;
+  --emerald: #1f6d4a;
+  --wine: #8c2f39;
+  --amber: #a8752a;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --canvas: #0a0f1c;
+    --surface: #111b30;
+    --surface-alt: #0d1526;
+    --border: #24314c;
+    --border-soft: #1b263f;
+    --ink: #eef1f6;
+    --ink-muted: #93a0b8;
+    --navy: #0a1220;
+    --navy-hover: #18264c;
+    --gold: #d4b06a;
+    --gold-soft: #a3813c;
+    --gold-strong: #e8cd93;
+    --emerald: #3fa377;
+    --wine: #d16070;
+    --amber: #d19b4c;
   }
 }
 
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-navy: var(--navy);
+  --color-navy-hover: var(--navy-hover);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-strong: var(--gold-strong);
+  --color-emerald: var(--emerald);
+  --color-wine: var(--wine);
+  --color-amber: var(--amber);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
+  }
+
+  .surface-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+  }
+
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
+    color: var(--color-navy);
+    font-weight: 600;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    transition: filter 0.15s ease;
+  }
+  .btn-gold:hover {
+    filter: brightness(1.06);
+  }
+  .btn-gold:disabled {
+    opacity: 0.55;
+  }
+
+  .btn-navy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background: var(--color-navy);
+    color: #f3ead2;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    font-size: 0.875rem;
+    transition:
+      background 0.15s ease,
+      opacity 0.15s ease;
+  }
+  .btn-navy:hover {
+    background: var(--color-navy-hover);
+  }
+  .btn-navy:disabled {
+    opacity: 0.6;
+  }
+
+  .field-input {
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    padding: 0.55rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 20%, transparent);
+  }
+
+  .field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .nav-link {
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    color: #c7cfe0;
+    transition: color 0.15s ease;
+  }
+  .nav-link:hover,
+  .nav-link.active {
+    color: var(--color-gold-strong);
+  }
 }

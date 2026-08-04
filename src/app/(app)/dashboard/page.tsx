@@ -11,14 +11,15 @@ import {
   spendByCategory,
 } from "@/lib/finance";
 import { CategoryPieChart, MonthlyComparisonChart } from "@/components/dashboard/DashboardCharts";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 function KpiCard({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
   return (
-    <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-      <p className="text-xs text-zinc-500">{label}</p>
+    <div className="surface-card p-5">
+      <p className="field-label">{label}</p>
       <p
-        className={`mt-1 text-xl font-semibold ${
-          tone === "up" ? "text-green-600" : tone === "down" ? "text-red-600" : "text-zinc-900 dark:text-zinc-50"
+        className={`font-display mt-2 text-2xl font-semibold ${
+          tone === "up" ? "text-emerald" : tone === "down" ? "text-wine" : "text-ink"
         }`}
       >
         {value}
@@ -49,27 +50,33 @@ export default async function DashboardPage() {
   const comparativo = monthlyComparison(transactionsRange, months);
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Painel</h1>
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrow="Visão geral" title="Painel" />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard label="Saldo consolidado" value={formatBRL(saldo)} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="surface-card bg-navy p-6 sm:col-span-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-soft">
+            Saldo consolidado
+          </p>
+          <p className="font-display mt-2 text-4xl font-semibold text-gold-strong">
+            {formatBRL(saldo)}
+          </p>
+        </div>
         <KpiCard label="Entradas do mês" value={formatBRL(entradas)} tone="up" />
         <KpiCard label="Saídas do mês" value={formatBRL(saidas)} tone="down" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label="Projeção fim do mês" value={formatBRL(projecao)} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-          <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Gastos por categoria (mês atual)
-          </h2>
+        <div className="surface-card p-5">
+          <h2 className="field-label mb-4">Gastos por categoria (mês atual)</h2>
           <CategoryPieChart data={distribuicao} />
         </div>
-        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-          <h2 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Entradas x saídas (últimos 6 meses)
-          </h2>
+        <div className="surface-card p-5">
+          <h2 className="field-label mb-4">Entradas x saídas (últimos 6 meses)</h2>
           <MonthlyComparisonChart data={comparativo} />
         </div>
       </div>

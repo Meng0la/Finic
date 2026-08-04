@@ -19,20 +19,20 @@ export function AccountForm() {
   const [tipo, setTipo] = useState<ContaTipo>("corrente");
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-      <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Nova conta</h2>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          Nome
-          <input name="nome" required className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
+    <form action={formAction} className="surface-card flex flex-col gap-4 p-6">
+      <h2 className="font-display text-lg font-semibold text-ink">Nova conta</h2>
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="field-label">Nome</span>
+          <input name="nome" required className="field-input" />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Tipo
+        <label className="flex flex-col gap-1.5">
+          <span className="field-label">Tipo</span>
           <select
             name="tipo"
             value={tipo}
             onChange={(e) => setTipo(e.target.value as ContaTipo)}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="field-input"
           >
             {Object.entries(TIPO_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -41,39 +41,29 @@ export function AccountForm() {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Saldo inicial (R$)
-          <input
-            name="saldo_inicial"
-            type="number"
-            step="0.01"
-            defaultValue={0}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+        <label className="flex flex-col gap-1.5">
+          <span className="field-label">Saldo inicial (R$)</span>
+          <input name="saldo_inicial" type="number" step="0.01" defaultValue={0} className="field-input" />
         </label>
         {tipo === "cartao" && (
           <>
-            <label className="flex flex-col gap-1 text-sm">
-              Limite (R$)
-              <input name="limite" type="number" step="0.01" className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
+            <label className="flex flex-col gap-1.5">
+              <span className="field-label">Limite (R$)</span>
+              <input name="limite" type="number" step="0.01" className="field-input" />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Dia de fechamento
-              <input name="dia_fechamento" type="number" min={1} max={31} className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
+            <label className="flex flex-col gap-1.5">
+              <span className="field-label">Dia de fechamento</span>
+              <input name="dia_fechamento" type="number" min={1} max={31} className="field-input" />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Dia de vencimento
-              <input name="dia_vencimento" type="number" min={1} max={31} className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
+            <label className="flex flex-col gap-1.5">
+              <span className="field-label">Dia de vencimento</span>
+              <input name="dia_vencimento" type="number" min={1} max={31} className="field-input" />
             </label>
           </>
         )}
       </div>
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
-      >
+      {state.error && <p className="text-sm text-wine">{state.error}</p>}
+      <button type="submit" disabled={pending} className="btn-navy self-start">
         {pending ? "Salvando..." : "Adicionar conta"}
       </button>
     </form>

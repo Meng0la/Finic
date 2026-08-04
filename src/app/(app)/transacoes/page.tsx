@@ -3,6 +3,7 @@ import { getAccounts, getCategories, getTransactions } from "@/lib/data";
 import { currentMonthRef, monthRange, shiftMonthRef } from "@/lib/finance";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionsList } from "@/components/transactions/TransactionsList";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function TransacoesPage({
   searchParams,
@@ -21,18 +22,27 @@ export default async function TransacoesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Transações</h1>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href={`/transacoes?mes=${shiftMonthRef(mes, -1)}`} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
-            ←
-          </Link>
-          <span className="font-medium">{mes}</span>
-          <Link href={`/transacoes?mes=${shiftMonthRef(mes, 1)}`} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
-            →
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Movimentação"
+        title="Transações"
+        meta={
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/transacoes?mes=${shiftMonthRef(mes, -1)}`}
+              className="text-ink-muted hover:text-gold"
+            >
+              ←
+            </Link>
+            <span className="font-display font-semibold text-ink">{mes}</span>
+            <Link
+              href={`/transacoes?mes=${shiftMonthRef(mes, 1)}`}
+              className="text-ink-muted hover:text-gold"
+            >
+              →
+            </Link>
+          </div>
+        }
+      />
       <TransactionsList transactions={transactions} accounts={accounts} categories={categories} />
       <TransactionForm accounts={accounts} categories={categories} />
     </div>

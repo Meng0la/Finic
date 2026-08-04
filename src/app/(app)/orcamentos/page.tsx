@@ -2,6 +2,7 @@ import { getBudgets, getCategories, getTransactions } from "@/lib/data";
 import { currentMonthRef, formatBRL, monthRange } from "@/lib/finance";
 import { deleteBudget } from "@/lib/actions/budgets";
 import { BudgetForm } from "@/components/budgets/BudgetForm";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function OrcamentosPage() {
   const mes = currentMonthRef();
@@ -21,29 +22,29 @@ export default async function OrcamentosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-        Orçamentos · {mes}
-      </h1>
+      <PageHeader eyebrow="Planejamento" title="Orçamentos" meta={mes} />
 
       {budgets.length === 0 ? (
-        <p className="text-sm text-zinc-500">Nenhum orçamento definido para este mês.</p>
+        <p className="text-sm text-ink-muted">Nenhum orçamento definido para este mês.</p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-4">
           {budgets.map((b) => {
             const categoria = categories.find((c) => c.id === b.category_id);
             const gasto = gastoPorCategoria.get(b.category_id) ?? 0;
             const percentual = Math.min(100, Math.round((gasto / b.limite_mensal) * 100));
-            const alerta = percentual >= 100 ? "bg-red-500" : percentual >= 80 ? "bg-amber-500" : "bg-green-500";
+            const alerta =
+              percentual >= 100 ? "bg-wine" : percentual >= 80 ? "bg-amber" : "bg-emerald";
 
             return (
-              <li key={b.id} className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                    {categoria?.nome ?? "—"}
-                  </span>
+              <li key={b.id} className="surface-card p-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-ink">{categoria?.nome ?? "—"}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-zinc-500">
-                      {formatBRL(gasto)} de {formatBRL(b.limite_mensal)}
+                    <span className="font-display text-sm font-semibold text-ink">
+                      {formatBRL(gasto)}{" "}
+                      <span className="font-sans font-normal text-ink-muted">
+                        de {formatBRL(b.limite_mensal)}
+                      </span>
                     </span>
                     <form
                       action={async () => {
@@ -51,17 +52,17 @@ export default async function OrcamentosPage() {
                         await deleteBudget(b.id);
                       }}
                     >
-                      <button type="submit" className="text-xs text-zinc-400 hover:text-red-600">
+                      <button type="submit" className="text-xs text-ink-muted hover:text-wine">
                         remover
                       </button>
                     </form>
                   </div>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-alt">
                   <div className={`h-full ${alerta}`} style={{ width: `${percentual}%` }} />
                 </div>
                 {percentual >= 80 && (
-                  <p className="mt-1 text-xs text-amber-600">
+                  <p className="mt-2 text-xs text-amber">
                     {percentual >= 100 ? "Limite atingido." : "80% do limite atingido."}
                   </p>
                 )}

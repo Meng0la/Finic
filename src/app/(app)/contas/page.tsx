@@ -2,6 +2,7 @@ import { getAccounts, getTransactions } from "@/lib/data";
 import { accountBalance, consolidatedBalance, formatBRL } from "@/lib/finance";
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountsList } from "@/components/accounts/AccountsList";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function ContasPage() {
   const [accounts, transactions] = await Promise.all([getAccounts(), getTransactions()]);
@@ -9,12 +10,18 @@ export default async function ContasPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Contas</h1>
-        <p className="text-sm text-zinc-500">
-          Saldo consolidado: <span className="font-medium">{formatBRL(consolidatedBalance(accounts, transactions))}</span>
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Patrimônio"
+        title="Contas"
+        meta={
+          <>
+            Saldo consolidado{" "}
+            <span className="font-display font-semibold text-ink">
+              {formatBRL(consolidatedBalance(accounts, transactions))}
+            </span>
+          </>
+        }
+      />
       <AccountsList accounts={accounts} balances={balances} />
       <AccountForm />
     </div>

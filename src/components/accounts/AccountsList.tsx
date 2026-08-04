@@ -17,22 +17,22 @@ export function AccountsList({
   balances: Map<string, number>;
 }) {
   if (accounts.length === 0) {
-    return <p className="text-sm text-zinc-500">Nenhuma conta cadastrada ainda.</p>;
+    return <p className="text-sm text-ink-muted">Nenhuma conta cadastrada ainda.</p>;
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+    <ul className="surface-card flex flex-col divide-y divide-border-soft overflow-hidden">
       {accounts.map((account) => (
-        <li key={account.id} className="flex items-center justify-between px-4 py-3">
+        <li key={account.id} className="flex items-center justify-between px-6 py-4">
           <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+            <p className="text-sm font-medium text-ink">
               {account.nome}
-              {!account.ativo && <span className="ml-2 text-xs text-zinc-400">(inativa)</span>}
+              {!account.ativo && <span className="ml-2 text-xs text-ink-muted">(inativa)</span>}
             </p>
-            <p className="text-xs text-zinc-500">{TIPO_LABELS[account.tipo]}</p>
+            <p className="text-xs text-ink-muted">{TIPO_LABELS[account.tipo]}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          <div className="flex items-center gap-5">
+            <span className="font-display text-base font-semibold text-ink">
               {formatBRL(balances.get(account.id) ?? account.saldo_inicial)}
             </span>
             <form
@@ -41,7 +41,7 @@ export function AccountsList({
                 await setAccountAtivo(account.id, !account.ativo);
               }}
             >
-              <button type="submit" className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+              <button type="submit" className="text-xs font-medium text-ink-muted hover:text-gold">
                 {account.ativo ? "Desativar" : "Reativar"}
               </button>
             </form>
