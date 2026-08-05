@@ -1,7 +1,9 @@
-import { getCategories } from "@/lib/data";
+import { getCategories, getTransactions } from "@/lib/data";
 import { deleteCategory } from "@/lib/actions/categories";
 import { CategoryForm } from "@/components/categories/CategoryForm";
+import { CategoryComparison } from "@/components/categories/CategoryComparison";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { categoryComparison, currentMonthRef, monthRange, shiftMonthRef } from "@/lib/finance";
 import type { Category } from "@/types/database";
 
 function CategoryGroup({ title, items }: { title: string; items: Category[] }) {
@@ -36,13 +38,25 @@ function CategoryGroup({ title, items }: { title: string; items: Category[] }) {
 }
 
 export default async function CategoriasPage() {
-  const categories = await getCategories();
+  const mesAtual = currentMonthRef();
+  const mesAnterior = shiftMonthRef(mesAtual, -1);
+  const rangeAtual = monthRange(mesAtual);
+  const rangeAnterior = monthRange(mesAnterior);
+
+  const [categories, transactionsAtual, transactionsAnterior] = await Promise.all([
+    getCategories(),
+    getTransactions(rangeAtual),
+    getTransactions(rangeAnterior),
+  ]);
+
   const receitas = categories.filter((c) => c.tipo === "receita");
   const despesas = categories.filter((c) => c.tipo === "despesa");
+  const comparativo = categoryComparison(transactionsAtual, transactionsAnterior, categories);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Organização" title="Categorias" />
+      <CategoryComparison items={comparativo} />
       <CategoryGroup title="Receitas" items={receitas} />
       <CategoryGroup title="Despesas" items={despesas} />
       <CategoryForm />

@@ -27,10 +27,33 @@ export function accountBalance(
   return saldo;
 }
 
-export function consolidatedBalance(accounts: Account[], transactions: Transaction[]): number {
+export function consolidatedBalance(
+  accounts: Account[],
+  transactions: Transaction[],
+  today = new Date()
+): number {
   return accounts
     .filter((a) => a.ativo)
-    .reduce((sum, a) => sum + accountBalance(a, transactions), 0);
+    .reduce((sum, a) => sum + accountBalance(a, transactions, today), 0);
+}
+
+/**
+ * Saldo consolidado ao final de cada mês da lista (ou hoje, se o mês ainda
+ * não terminou) — reaproveita o corte de data de accountBalance/
+ * consolidatedBalance para reconstruir a evolução do patrimônio.
+ */
+export function netWorthHistory(
+  accounts: Account[],
+  transactions: Transaction[],
+  months: string[]
+): { mes: string; saldo: number }[] {
+  const hoje = new Date();
+  return months.map((mes) => {
+    const [year, month] = mes.split("-").map(Number);
+    const fimDoMes = new Date(year, month, 0);
+    const corte = fimDoMes < hoje ? fimDoMes : hoje;
+    return { mes, saldo: consolidatedBalance(accounts, transactions, corte) };
+  });
 }
 
 export function monthRange(mesReferencia: string): { from: string; to: string } {
@@ -94,6 +117,56 @@ export function monthlyComparison(
 
 export function lastMonths(count: number, ref = currentMonthRef()): string[] {
   return Array.from({ length: count }, (_, i) => shiftMonthRef(ref, i - (count - 1)));
+}
+
+export interface CategoryComparisonItem {
+  categoria: string;
+  cor: string;
+  atual: number;
+  anterior: number;
+  deltaPercent: number | null;
+}
+
+/**
+ * Compara gasto por categoria do mês atual com o mês anterior. deltaPercent
+ * é null quando não havia gasto no mês anterior (não dá pra calcular %).
+ */
+export function categoryComparison(
+  transactionsAtual: Transaction[],
+  transactionsAnterior: Transaction[],
+  categories: Category[]
+): CategoryComparisonItem[] {
+  function totalsByCategory(transactions: Transaction[]): Map<string, number> {
+    const totals = new Map<string, number>();
+    for (const t of transactions) {
+      if (t.status !== "ativo" || t.tipo !== "despesa") continue;
+      const key = t.category_id ?? "sem-categoria";
+      totals.set(key, (totals.get(key) ?? 0) + t.valor);
+    }
+    return totals;
+  }
+
+  const atual = totalsByCategory(transactionsAtual);
+  const anterior = totalsByCategory(transactionsAnterior);
+  const allKeys = new Set([...atual.keys(), ...anterior.keys()]);
+
+  return Array.from(allKeys)
+    .map((categoryId) => {
+      const cat = categories.find((c) => c.id === categoryId);
+      const valorAtual = atual.get(categoryId) ?? 0;
+      const valorAnterior = anterior.get(categoryId) ?? 0;
+      const deltaPercent =
+        valorAnterior > 0 ? Math.round(((valorAtual - valorAnterior) / valorAnterior) * 100) : null;
+      return {
+        categoria: cat?.nome ?? "Sem categoria",
+        cor: cat?.cor ?? "#94a3b8",
+        atual: valorAtual,
+        anterior: valorAnterior,
+        deltaPercent,
+      };
+    })
+    .filter((item) => item.atual > 0 || item.anterior > 0)
+    .sort((a, b) => b.atual - a.atual);
 }
 
 /**

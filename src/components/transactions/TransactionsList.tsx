@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { reverseTransaction } from "@/lib/actions/transactions";
 import { formatBRL } from "@/lib/finance";
 import type { Account, Category, Transaction } from "@/types/database";
@@ -62,16 +63,24 @@ export function TransactionsList({
               {formatBRL(t.valor)}
             </span>
             {t.status === "ativo" && (
-              <form
-                action={async () => {
-                  "use server";
-                  await reverseTransaction(t.id);
-                }}
-              >
-                <button type="submit" className="text-xs font-medium text-ink-muted hover:text-wine">
-                  Estornar
-                </button>
-              </form>
+              <>
+                <Link
+                  href={`/transacoes/${t.id}`}
+                  className="text-xs font-medium text-ink-muted hover:text-gold"
+                >
+                  Editar
+                </Link>
+                <form
+                  action={async () => {
+                    "use server";
+                    await reverseTransaction(t.id);
+                  }}
+                >
+                  <button type="submit" className="text-xs font-medium text-ink-muted hover:text-wine">
+                    Estornar
+                  </button>
+                </form>
+              </>
             )}
           </div>
         </li>

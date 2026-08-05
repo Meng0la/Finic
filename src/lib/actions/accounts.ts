@@ -6,6 +6,7 @@ import type { ContaTipo } from "@/types/database";
 
 export interface ActionState {
   error?: string;
+  warning?: string;
 }
 
 export async function createAccount(

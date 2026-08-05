@@ -192,6 +192,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      goals: {
+        Row: {
+          id: string;
+          user_id: string;
+          nome: string;
+          valor_alvo: number;
+          valor_atual: number;
+          data_alvo: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          nome: string;
+          valor_alvo: number;
+          valor_atual?: number;
+          data_alvo?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          nome?: string;
+          valor_alvo?: number;
+          valor_atual?: number;
+          data_alvo?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           user_id: string;
@@ -216,6 +252,7 @@ export type Database = {
       transactions: {
         Row: {
           account_id: string;
+          anexo_path: string | null;
           category_id: string | null;
           conta_destino_id: string | null;
           created_at: string;
@@ -236,6 +273,7 @@ export type Database = {
         };
         Insert: {
           account_id: string;
+          anexo_path?: string | null;
           category_id?: string | null;
           conta_destino_id?: string | null;
           created_at?: string;
@@ -256,6 +294,7 @@ export type Database = {
         };
         Update: {
           account_id?: string;
+          anexo_path?: string | null;
           category_id?: string | null;
           conta_destino_id?: string | null;
           created_at?: string;
@@ -366,6 +405,7 @@ type BudgetRow = Database["public"]["Tables"]["budgets"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type InvestmentSuggestionRow = Database["public"]["Tables"]["investment_suggestions"]["Row"];
 type AuditLogRow = Database["public"]["Tables"]["audit_log"]["Row"];
+type GoalRow = Database["public"]["Tables"]["goals"]["Row"];
 
 export interface Account extends Omit<AccountRow, "tipo"> {
   tipo: ContaTipo;
@@ -383,6 +423,12 @@ export interface Transaction extends Omit<TransactionRow, "tipo" | "recorrencia"
 }
 
 export type Budget = BudgetRow;
+
+export type GoalStatus = "ativa" | "concluida" | "cancelada";
+
+export interface Goal extends Omit<GoalRow, "status"> {
+  status: GoalStatus;
+}
 
 export type AuditLogAcao = "insert" | "update" | "soft_delete" | "estorno";
 

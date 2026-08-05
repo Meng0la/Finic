@@ -7,10 +7,15 @@ import {
   monthRange,
   monthTotals,
   monthlyComparison,
+  netWorthHistory,
   projectedMonthEndBalance,
   spendByCategory,
 } from "@/lib/finance";
-import { CategoryPieChart, MonthlyComparisonChart } from "@/components/dashboard/DashboardCharts";
+import {
+  CategoryPieChart,
+  MonthlyComparisonChart,
+  NetWorthChart,
+} from "@/components/dashboard/DashboardCharts";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LuxuryAurora } from "@/components/brand/LuxuryAurora";
 
@@ -49,6 +54,7 @@ export default async function DashboardPage() {
   const projecao = projectedMonthEndBalance(saldo, transactionsMes);
   const distribuicao = spendByCategory(transactionsMes, categories);
   const comparativo = monthlyComparison(transactionsRange, months);
+  const evolucaoPatrimonio = netWorthHistory(accounts, transactionsAllTime, months);
 
   return (
     <div className="flex flex-col gap-8">
@@ -88,6 +94,11 @@ export default async function DashboardPage() {
           <h2 className="field-label mb-4">Entradas x saídas (últimos 6 meses)</h2>
           <MonthlyComparisonChart data={comparativo} />
         </div>
+      </div>
+
+      <div className="surface-card p-5">
+        <h2 className="field-label mb-4">Evolução do patrimônio (últimos 6 meses)</h2>
+        <NetWorthChart data={evolucaoPatrimonio} />
       </div>
     </div>
   );

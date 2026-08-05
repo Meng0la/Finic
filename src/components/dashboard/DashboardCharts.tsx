@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -93,6 +95,39 @@ export function MonthlyComparisonChart({
         <Bar dataKey="entradas" name="Entradas" fill="#1f6d4a" radius={[4, 4, 0, 0]} />
         <Bar dataKey="saidas" name="Saídas" fill="#8c2f39" radius={[4, 4, 0, 0]} />
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function NetWorthChart({ data }: { data: { mes: string; saldo: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id="netWorthFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#a3813c" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="#a3813c" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e4ddcc" />
+        <XAxis dataKey="mes" fontSize={12} stroke="#636b80" tickLine={false} axisLine={{ stroke: "#e4ddcc" }} />
+        <YAxis
+          fontSize={12}
+          stroke="#636b80"
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v) => `${v / 1000}k`}
+        />
+        <Tooltip formatter={(value) => formatBRL(Number(value))} contentStyle={TOOLTIP_STYLE} />
+        <Area
+          type="monotone"
+          dataKey="saldo"
+          name="Saldo consolidado"
+          stroke="#a3813c"
+          strokeWidth={2}
+          fill="url(#netWorthFill)"
+        />
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

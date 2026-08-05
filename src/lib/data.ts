@@ -4,6 +4,7 @@ import type {
   AuditLogEntry,
   Budget,
   Category,
+  Goal,
   InvestmentSuggestion,
   PerfilRisco,
   Profile,
@@ -25,6 +26,11 @@ export async function getCategories(): Promise<Category[]> {
 export async function getTransactions(opts?: {
   from?: string;
   to?: string;
+  q?: string;
+  categoryId?: string;
+  tipo?: string;
+  valorMin?: number;
+  valorMax?: number;
 }): Promise<Transaction[]> {
   const supabase = await createClient();
   let query = supabase
@@ -35,9 +41,20 @@ export async function getTransactions(opts?: {
 
   if (opts?.from) query = query.gte("data", opts.from);
   if (opts?.to) query = query.lte("data", opts.to);
+  if (opts?.q) query = query.ilike("descricao", `%${opts.q}%`);
+  if (opts?.categoryId) query = query.eq("category_id", opts.categoryId);
+  if (opts?.tipo) query = query.eq("tipo", opts.tipo);
+  if (opts?.valorMin !== undefined) query = query.gte("valor", opts.valorMin);
+  if (opts?.valorMax !== undefined) query = query.lte("valor", opts.valorMax);
 
   const { data } = await query;
   return (data ?? []) as Transaction[];
+}
+
+export async function getTransaction(id: string): Promise<Transaction | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("transactions").select("*").eq("id", id).single();
+  return (data as Transaction | null) ?? null;
 }
 
 export async function getBudgets(mesReferencia: string): Promise<Budget[]> {
@@ -90,4 +107,14 @@ export async function getAuditLog(limit = 100): Promise<AuditLogEntry[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as unknown as AuditLogEntry[];
+}
+
+export async function getGoals(): Promise<Goal[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("goals")
+    .select("*")
+    .order("status", { ascending: true })
+    .order("created_at", { ascending: false });
+  return (data ?? []) as unknown as Goal[];
 }

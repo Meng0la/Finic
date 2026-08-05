@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,16 @@ const displayFont = Playfair_Display({
 export const metadata: Metadata = {
   title: "Finic",
   description: "Controle financeiro pessoal",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Finic",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0e1a30",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
