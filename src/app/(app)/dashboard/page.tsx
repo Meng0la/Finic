@@ -71,7 +71,12 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <KpiCard label="Projeção fim do mês" value={formatBRL(projecao)} />
+        <div>
+          <KpiCard label="Projeção fim do mês" value={formatBRL(projecao)} />
+          <p className="mt-2 text-xs text-ink-muted">
+            Saldo atual + lançamentos já agendados até o fim do mês. Não extrapola médias.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

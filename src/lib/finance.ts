@@ -89,17 +89,24 @@ export function lastMonths(count: number, ref = currentMonthRef()): string[] {
   return Array.from({ length: count }, (_, i) => shiftMonthRef(ref, i - (count - 1)));
 }
 
+/**
+ * Soma apenas lançamentos já registrados (recorrentes/parcelados incluídos)
+ * com data entre amanhã e o fim do mês — nunca extrapola uma média. Se não
+ * há nada agendado, a projeção é igual ao saldo atual.
+ */
 export function projectedMonthEndBalance(
   saldoAtual: number,
   transactionsThisMonth: Transaction[],
   today = new Date()
 ): number {
-  const { entradas, saidas } = monthTotals(transactionsThisMonth);
-  const dayOfMonth = today.getDate();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const remainingDays = daysInMonth - dayOfMonth;
-  if (dayOfMonth === 0) return saldoAtual;
+  const todayStr = today.toISOString().slice(0, 10);
 
-  const dailyNet = (entradas - saidas) / dayOfMonth;
-  return saldoAtual + dailyNet * remainingDays;
+  let net = 0;
+  for (const t of transactionsThisMonth) {
+    if (t.status !== "ativo" || t.data <= todayStr) continue;
+    if (t.tipo === "receita") net += t.valor;
+    else if (t.tipo === "despesa") net -= t.valor;
+  }
+
+  return saldoAtual + net;
 }
