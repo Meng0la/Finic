@@ -1,19 +1,25 @@
+import { LuxuryAurora } from "@/components/auth/LuxuryAurora";
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center bg-navy px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <span className="font-display text-3xl font-semibold tracking-wide text-gold-strong">
+    <div className="grid flex-1 grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
+      <div className="relative flex min-h-[280px] flex-col items-center justify-center overflow-hidden bg-navy px-8 py-16">
+        <LuxuryAurora />
+        <div className="relative z-10 max-w-sm text-center">
+          <span className="font-display text-4xl font-semibold tracking-wide text-gold-strong lg:text-5xl">
             Finic
           </span>
-          <p className="mt-1 text-xs uppercase tracking-[0.25em] text-[#8b93a8]">
+          <div className="mx-auto my-5 h-px w-14 bg-gradient-to-r from-transparent via-gold to-transparent" />
+          <p className="text-xs uppercase tracking-[0.3em] text-[#c7cfe0]">
             Controle financeiro pessoal
           </p>
+          <p className="mt-6 hidden text-sm leading-relaxed text-[#93a0b8] lg:block">
+            Clareza e discrição para administrar o seu patrimônio, com a precisão que ele merece.
+          </p>
         </div>
-        <div className="surface-card overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)]">
-          <div className="h-1 w-full bg-gradient-to-r from-gold-soft via-gold to-gold-strong" />
-          <div className="p-8">{children}</div>
-        </div>
+      </div>
+      <div className="flex flex-1 items-center justify-center bg-surface px-4 py-12">
+        <div className="w-full max-w-sm">{children}</div>
       </div>
     </div>
   );

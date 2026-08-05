@@ -11,6 +11,10 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <div className="mb-2">
+        <p className="field-label">Nova conta</p>
+        <h1 className="font-display text-2xl font-semibold text-ink">Criar conta</h1>
+      </div>
       <label className="flex flex-col gap-1.5">
         <span className="field-label">E-mail</span>
         <input type="email" name="email" required autoComplete="email" className="field-input" />

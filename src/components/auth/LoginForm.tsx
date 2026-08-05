@@ -11,6 +11,10 @@ export function LoginForm({ verifiqueEmail }: { verifiqueEmail: boolean }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <div className="mb-2">
+        <p className="field-label">Acesso</p>
+        <h1 className="font-display text-2xl font-semibold text-ink">Entrar</h1>
+      </div>
       {verifiqueEmail && (
         <p className="rounded-md border border-border bg-surface-alt px-3 py-2 text-sm text-ink-muted">
           Conta criada. Verifique seu e-mail para confirmar o cadastro antes de entrar.
