@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthRef, monthRange, monthTotals } from "@/lib/finance";
+import { callGroqChat } from "@/lib/groq";
 import type { ActionState } from "@/lib/actions/accounts";
 import type {
   Experiencia,
@@ -13,7 +14,6 @@ import type {
   Transaction,
 } from "@/types/database";
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // groq/compound (busca embutida) falha de forma intermitente e frequente no
 // tier gratuito (429 de rate limit, 413 "Request Entity Too Large" mesmo com
 // payloads pequenos — bug conhecido, não é algo que controlamos). Em vez de
@@ -22,9 +22,6 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // passamos como fato pronto pro modelo — mais rápido e muito mais confiável
 // do que pedir pro modelo "pesquisar" sozinho.
 const GROQ_MODEL = "openai/gpt-oss-120b";
-const REQUEST_TIMEOUT_MS = 25000;
-const MIN_RETRY_WAIT_MS = 3000;
-const MAX_RETRY_WAIT_MS = 15000;
 
 const BCB_SERIES = {
   selic: "432", // Meta Selic definida pelo Copom (% a.a.)
@@ -159,74 +156,20 @@ function parseSuggestion(raw: string): Omit<InvestmentSuggestionPayload, "fontes
   return parsed as Omit<InvestmentSuggestionPayload, "fontes">;
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function parseRetryAfterMs(message: string): number {
-  const match = message.match(/try again in ([\d.]+)s/i);
-  const reported = match ? Math.ceil(parseFloat(match[1]) * 1000) + 500 : 5000;
-  return Math.min(Math.max(reported, MIN_RETRY_WAIT_MS), MAX_RETRY_WAIT_MS);
-}
-
-async function callGroq(
+function callGroq(
   apiKey: string,
   system: string,
   userPrompt: string
 ): Promise<{ content?: string; error?: string }> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    let response: Response;
-    try {
-      response = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.4,
-        }),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      clearTimeout(timeout);
-      console.error("Groq fetch failed", err);
-      return { error: "Falha ao conectar com a Groq. Tente novamente." };
-    }
-    clearTimeout(timeout);
-
-    if (response.ok) {
-      const data = await response.json();
-      return { content: data.choices?.[0]?.message?.content };
-    }
-
-    const bodyText = await response.text().catch(() => "");
-    let detail = bodyText;
-    try {
-      detail = JSON.parse(bodyText)?.error?.message ?? bodyText;
-    } catch {
-      // corpo não é JSON, usa o texto cru mesmo
-    }
-    console.error("Groq API error", response.status, bodyText);
-
-    if ((response.status === 429 || response.status === 413) && attempt === 0) {
-      await sleep(response.status === 429 ? parseRetryAfterMs(detail) : MIN_RETRY_WAIT_MS);
-      continue;
-    }
-
-    return { error: `Groq respondeu com erro (${response.status})${detail ? `: ${detail}` : ""}.` };
-  }
-
-  return { error: "A Groq está com alta demanda no momento." };
+  return callGroqChat(apiKey, {
+    model: GROQ_MODEL,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: userPrompt },
+    ],
+    response_format: { type: "json_object" },
+    temperature: 0.4,
+  });
 }
 
 function fontesBcb(indicadores: IndicadoresMercado): FonteConsultada[] {
