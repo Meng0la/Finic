@@ -16,8 +16,14 @@ import type {
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // groq/compound tem busca na internet embutida (até 10 chamadas de ferramenta
 // por requisição) — é mais lento que um modelo comum, mas traz dados atuais
-// (taxas, exemplos reais de produtos) em vez de "achismo" do modelo.
-const GROQ_MODEL = "groq/compound";
+// (taxas, exemplos reais de produtos) em vez de "achismo" do modelo. É um
+// recurso em preview da Groq e falha de forma intermitente (429 de rate
+// limit do tier gratuito, ou 413 "Request Entity Too Large" mesmo com
+// payloads pequenos — bug conhecido, não é algo que controlamos). Por isso
+// há retry embutido e, se mesmo assim falhar, um fallback para um modelo
+// sem busca em vez de simplesmente devolver erro pro usuário.
+const SEARCH_MODEL = "groq/compound";
+const FALLBACK_MODEL = "openai/gpt-oss-120b";
 const REQUEST_TIMEOUT_MS = 30000;
 const MAX_RETRY_WAIT_MS = 20000;
 
@@ -33,8 +39,17 @@ const EXPERIENCE_LABELS: Record<Experiencia, string> = {
   avancado: "avançado (investidor experiente; pode ser direto e técnico, sem explicar o óbvio)",
 };
 
-function buildPrompt(valorBase: number, perfil: PerfilRisco, experiencia: Experiencia) {
-  const system = `Você é um educador financeiro para um app pessoal de uso individual (não é uma plataforma para o público). Use a ferramenta de busca na internet para trazer dados atuais do Brasil (taxa Selic, CDI, exemplos reais de produtos e suas taxas/condições atuais, tickers de ações/ETFs negociados na B3) antes de montar a sugestão — não invente números.
+function buildPrompt(
+  valorBase: number,
+  perfil: PerfilRisco,
+  experiencia: Experiencia,
+  comBusca: boolean
+) {
+  const introBusca = comBusca
+    ? `Você é um educador financeiro para um app pessoal de uso individual (não é uma plataforma para o público). Use a ferramenta de busca na internet para trazer dados atuais do Brasil (taxa Selic, CDI, exemplos reais de produtos e suas taxas/condições atuais, tickers de ações/ETFs negociados na B3) antes de montar a sugestão — não invente números.`
+    : `Você é um educador financeiro para um app pessoal de uso individual (não é uma plataforma para o público). A busca em tempo real não está disponível nesta geração — use seu conhecimento geral sobre o mercado brasileiro, deixando claro nos números (taxas, percentuais) que são aproximações e podem estar desatualizadas. Inclua em "alertas" um aviso específico de que esta sugestão não pôde consultar dados em tempo real.`;
+
+  const system = `${introBusca}
 
 Monte uma alocação DIVERSIFICADA (pelo menos 4 categorias diferentes, adequadas ao valor e ao perfil) usando produtos comuns no mercado brasileiro: Tesouro Direto (Selic, IPCA+, prefixado), CDB/LCI/LCA (prefixado ou pós-fixado), fundos DI ou multimercado, ações ou ETFs negociados na B3, fundos imobiliários (FIIs), poupança só se fizer sentido para o perfil.
 
@@ -55,7 +70,7 @@ Inclua em "alertas" pelo menos um aviso de que a sugestão é gerada por IA, nã
 
   const user = `Valor disponível para investir este mês: R$ ${valorBase.toFixed(2)}.
 Perfil de risco: ${RISK_LABELS[perfil]}.
-Pesquise informações atuais e monte a alocação diversificada e explicada conforme as instruções.`;
+${comBusca ? "Pesquise informações atuais e monte" : "Monte"} a alocação diversificada e explicada conforme as instruções.`;
 
   return { system, user };
 }
@@ -128,6 +143,7 @@ function sleep(ms: number) {
 
 async function callGroq(
   apiKey: string,
+  model: string,
   system: string,
   userPrompt: string
 ): Promise<{ message?: GroqMessage; error?: string }> {
@@ -144,7 +160,7 @@ async function callGroq(
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: GROQ_MODEL,
+          model,
           messages: [
             { role: "system", content: system },
             { role: "user", content: userPrompt },
@@ -156,7 +172,7 @@ async function callGroq(
       });
     } catch (err) {
       clearTimeout(timeout);
-      console.error("Groq fetch failed", err);
+      console.error("Groq fetch failed", model, err);
       return { error: "Falha ao conectar com a Groq. Tente novamente." };
     }
     clearTimeout(timeout);
@@ -173,19 +189,52 @@ async function callGroq(
     } catch {
       // corpo não é JSON, usa o texto cru mesmo
     }
-    console.error("Groq API error", response.status, bodyText);
+    console.error("Groq API error", model, response.status, bodyText);
 
-    if (response.status === 429 && attempt === 0) {
-      await sleep(parseRetryAfterMs(detail));
+    // 429 (rate limit) e 413 (bug conhecido do groq/compound, mesmo com
+    // payloads pequenos) costumam ser transitórios — vale uma retentativa.
+    if ((response.status === 429 || response.status === 413) && attempt === 0) {
+      await sleep(response.status === 429 ? parseRetryAfterMs(detail) : MIN_RETRY_WAIT_MS);
       continue;
     }
 
     return {
-      error: `Groq respondeu com erro (${response.status})${detail ? `: ${detail}` : ""}. Tente novamente em alguns instantes.`,
+      error: `Groq respondeu com erro (${response.status})${detail ? `: ${detail}` : ""}.`,
     };
   }
 
-  return { error: "A Groq está com alta demanda no momento. Tente novamente em alguns instantes." };
+  return { error: "A Groq está com alta demanda no momento." };
+}
+
+async function callGroqWithFallback(
+  apiKey: string,
+  valorBase: number,
+  perfil: PerfilRisco,
+  experiencia: Experiencia
+): Promise<{ message?: GroqMessage; modelo: string; comBusca: boolean; error?: string }> {
+  const searchPrompt = buildPrompt(valorBase, perfil, experiencia, true);
+  const searchResult = await callGroq(apiKey, SEARCH_MODEL, searchPrompt.system, searchPrompt.user);
+  if (searchResult.message) {
+    return { message: searchResult.message, modelo: SEARCH_MODEL, comBusca: true };
+  }
+
+  console.error("Busca na internet falhou, caindo para modelo sem busca", searchResult.error);
+  const fallbackPrompt = buildPrompt(valorBase, perfil, experiencia, false);
+  const fallbackResult = await callGroq(
+    apiKey,
+    FALLBACK_MODEL,
+    fallbackPrompt.system,
+    fallbackPrompt.user
+  );
+  if (fallbackResult.message) {
+    return { message: fallbackResult.message, modelo: FALLBACK_MODEL, comBusca: false };
+  }
+
+  return {
+    modelo: FALLBACK_MODEL,
+    comBusca: false,
+    error: fallbackResult.error ?? searchResult.error ?? "Falha ao gerar sugestão. Tente novamente.",
+  };
 }
 
 export async function generateInvestmentSuggestion(
@@ -224,8 +273,12 @@ export async function generateInvestmentSuggestion(
     };
   }
 
-  const { system, user: userPrompt } = buildPrompt(valorBase, perfil, experiencia);
-  const { message, error } = await callGroq(apiKey, system, userPrompt);
+  const { message, modelo, comBusca, error } = await callGroqWithFallback(
+    apiKey,
+    valorBase,
+    perfil,
+    experiencia
+  );
   if (error || !message) {
     return { error: error ?? "Resposta vazia da IA. Tente novamente." };
   }
@@ -241,6 +294,13 @@ export async function generateInvestmentSuggestion(
     return { error: "A IA respondeu em um formato inesperado. Tente novamente." };
   }
 
+  if (!comBusca) {
+    base.alertas = [
+      "Não foi possível pesquisar dados em tempo real desta vez — os números acima são aproximações com base em conhecimento geral, não em cotações atuais.",
+      ...base.alertas,
+    ];
+  }
+
   const sugestao: InvestmentSuggestionPayload = {
     ...base,
     fontes: extractFontes(message),
@@ -253,7 +313,7 @@ export async function generateInvestmentSuggestion(
     perfil_risco: perfil,
     experiencia,
     sugestao: sugestao as unknown as Json,
-    modelo: GROQ_MODEL,
+    modelo,
   });
 
   if (insertError) return { error: insertError.message };
