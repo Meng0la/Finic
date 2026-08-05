@@ -156,6 +156,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      investment_suggestions: {
+        Row: {
+          id: string;
+          user_id: string;
+          mes_referencia: string;
+          valor_base: number;
+          perfil_risco: string;
+          sugestao: Json;
+          modelo: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          mes_referencia: string;
+          valor_base: number;
+          perfil_risco: string;
+          sugestao: Json;
+          modelo?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          mes_referencia?: string;
+          valor_base?: number;
+          perfil_risco?: string;
+          sugestao?: Json;
+          modelo?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      profiles: {
+        Row: {
+          user_id: string;
+          perfil_risco: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          perfil_risco?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          perfil_risco?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       transactions: {
         Row: {
           account_id: string;
@@ -299,11 +350,14 @@ export type TransacaoTipo = "receita" | "despesa" | "transferencia";
 export type Recorrencia = "unica" | "fixa_mensal" | "parcelada";
 export type Origem = "web" | "whatsapp";
 export type TransacaoStatus = "ativo" | "estornado";
+export type PerfilRisco = "conservador" | "moderado" | "arrojado";
 
 type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type BudgetRow = Database["public"]["Tables"]["budgets"]["Row"];
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type InvestmentSuggestionRow = Database["public"]["Tables"]["investment_suggestions"]["Row"];
 
 export interface Account extends Omit<AccountRow, "tipo"> {
   tipo: ContaTipo;
@@ -321,3 +375,25 @@ export interface Transaction extends Omit<TransactionRow, "tipo" | "recorrencia"
 }
 
 export type Budget = BudgetRow;
+
+export interface Profile extends Omit<ProfileRow, "perfil_risco"> {
+  perfil_risco: PerfilRisco;
+}
+
+export interface AllocationItem {
+  categoria: string;
+  percentual: number;
+  justificativa: string;
+}
+
+export interface InvestmentSuggestionPayload {
+  resumo: string;
+  alocacao: AllocationItem[];
+  alertas: string[];
+}
+
+export interface InvestmentSuggestion
+  extends Omit<InvestmentSuggestionRow, "perfil_risco" | "sugestao"> {
+  perfil_risco: PerfilRisco;
+  sugestao: InvestmentSuggestionPayload;
+}

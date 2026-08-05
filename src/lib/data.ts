@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Account, Budget, Category, Transaction } from "@/types/database";
+import type {
+  Account,
+  Budget,
+  Category,
+  InvestmentSuggestion,
+  PerfilRisco,
+  Profile,
+  Transaction,
+} from "@/types/database";
 
 export async function getAccounts(): Promise<Account[]> {
   const supabase = await createClient();
@@ -38,4 +46,30 @@ export async function getBudgets(mesReferencia: string): Promise<Budget[]> {
     .select("*")
     .eq("mes_referencia", `${mesReferencia}-01`);
   return data ?? [];
+}
+
+export async function getProfile(): Promise<Profile | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  return (data as Profile | null) ?? { user_id: user.id, perfil_risco: "moderado" as PerfilRisco, updated_at: "" };
+}
+
+export async function getInvestmentSuggestions(limit = 5): Promise<InvestmentSuggestion[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("investment_suggestions")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as InvestmentSuggestion[];
 }
