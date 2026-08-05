@@ -17,7 +17,7 @@ export async function callGroqChat(
   apiKey: string,
   body: Record<string, unknown>
 ): Promise<{ content?: string; error?: string }> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -53,7 +53,9 @@ export async function callGroqChat(
     }
     console.error("Groq API error", response.status, bodyText);
 
-    if ((response.status === 429 || response.status === 413) && attempt === 0) {
+    const isRetryable =
+      response.status === 429 || response.status === 413 || response.status === 503;
+    if (isRetryable && attempt < 2) {
       await sleep(response.status === 429 ? parseRetryAfterMs(detail) : MIN_RETRY_WAIT_MS);
       continue;
     }
