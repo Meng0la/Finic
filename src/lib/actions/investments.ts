@@ -4,10 +4,22 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthRef, monthRange, monthTotals } from "@/lib/finance";
 import type { ActionState } from "@/lib/actions/accounts";
-import type { InvestmentSuggestionPayload, Json, PerfilRisco, Transaction } from "@/types/database";
+import type {
+  Experiencia,
+  FonteConsultada,
+  InvestmentSuggestionPayload,
+  Json,
+  PerfilRisco,
+  Transaction,
+} from "@/types/database";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "openai/gpt-oss-120b";
+// groq/compound tem busca na internet embutida (até 10 chamadas de ferramenta
+// por requisição) — é mais lento que um modelo comum, mas traz dados atuais
+// (taxas, exemplos reais de produtos) em vez de "achismo" do modelo.
+const GROQ_MODEL = "groq/compound";
+const REQUEST_TIMEOUT_MS = 30000;
+const MAX_RETRY_WAIT_MS = 20000;
 
 const RISK_LABELS: Record<PerfilRisco, string> = {
   conservador: "conservador (prioriza segurança e liquidez, aceita retorno menor)",
@@ -15,20 +27,43 @@ const RISK_LABELS: Record<PerfilRisco, string> = {
   arrojado: "arrojado (aceita mais risco e volatilidade em troca de retorno maior)",
 };
 
-function buildPrompt(valorBase: number, perfil: PerfilRisco) {
-  const system = `Você é um assistente de educação financeira para um app pessoal (uso individual, não é uma plataforma para o público). Sugira uma alocação de investimentos em Reais (BRL), usando categorias comuns no mercado brasileiro (ex: Reserva de emergência em Tesouro Selic ou CDB com liquidez diária, CDB/LCI/LCA prefixado ou pós-fixado, Tesouro IPCA+, fundos multimercado, ações/ETFs, fundos imobiliários). Nunca prometa rentabilidade garantida. Sempre inclua um alerta deixando claro que a sugestão é gerada por IA, não é consultoria de investimentos licenciada (CVM) e que decisões finais são do usuário. Responda APENAS com um JSON válido, sem markdown, no formato exato:
-{"resumo": "string curta (2-3 frases) explicando a estratégia geral", "alocacao": [{"categoria": "string", "percentual": number, "justificativa": "string curta"}], "alertas": ["string"]}
-Os percentuais de "alocacao" devem somar exatamente 100.`;
+const EXPERIENCE_LABELS: Record<Experiencia, string> = {
+  iniciante: "iniciante (nunca investiu ou investe há pouco tempo; precisa de explicações básicas, sem jargão)",
+  intermediario: "intermediário (já investe, entende os termos básicos, quer mais profundidade)",
+  avancado: "avançado (investidor experiente; pode ser direto e técnico, sem explicar o óbvio)",
+};
+
+function buildPrompt(valorBase: number, perfil: PerfilRisco, experiencia: Experiencia) {
+  const system = `Você é um educador financeiro para um app pessoal de uso individual (não é uma plataforma para o público). Use a ferramenta de busca na internet para trazer dados atuais do Brasil (taxa Selic, CDI, exemplos reais de produtos e suas taxas/condições atuais, tickers de ações/ETFs negociados na B3) antes de montar a sugestão — não invente números.
+
+Monte uma alocação DIVERSIFICADA (pelo menos 4 categorias diferentes, adequadas ao valor e ao perfil) usando produtos comuns no mercado brasileiro: Tesouro Direto (Selic, IPCA+, prefixado), CDB/LCI/LCA (prefixado ou pós-fixado), fundos DI ou multimercado, ações ou ETFs negociados na B3, fundos imobiliários (FIIs), poupança só se fizer sentido para o perfil.
+
+Nível de experiência do investidor: ${EXPERIENCE_LABELS[experiencia]}. Adapte a linguagem de "explicacao" e "como_investir" a esse nível — para iniciante, explique o que É o produto como se fosse a primeira vez que a pessoa ouve falar (defina termos como "liquidez", "CDI", "FGC"); para avançado, seja mais técnico e direto.
+
+Para CADA item da alocação, preencha:
+- "categoria": nome específico do produto (ex: "Tesouro Selic 2029", não só "Tesouro Direto")
+- "percentual": número (a soma de todos os itens deve ser exatamente 100)
+- "risco": "baixo", "medio" ou "alto"
+- "explicacao": o que é esse investimento e como ele funciona (uma "aula" curta, didática, no nível do investidor)
+- "como_investir": passo a passo prático de como começar a aplicar nesse produto (ex: abrir conta em corretora/banco, onde encontrar o produto, valor mínimo típico) — NUNCA inclua links ou instruções de compra automática, apenas oriente o caminho manual que a pessoa mesma vai seguir
+
+IMPORTANTE sobre links: você NÃO deve inventar URLs. Os links reais das fontes que você pesquisar serão anexados automaticamente pelo sistema — não inclua o campo "fontes" na sua resposta.
+
+Nunca prometa rentabilidade garantida. Responda APENAS com um JSON válido, sem markdown, no formato exato:
+{"resumo": "string (3-4 frases) explicando a estratégia geral e por que faz sentido para esse perfil/nível", "alocacao": [{"categoria": "string", "percentual": number, "risco": "baixo|medio|alto", "explicacao": "string", "como_investir": "string"}], "alertas": ["string"]}
+Inclua em "alertas" pelo menos um aviso de que a sugestão é gerada por IA, não é consultoria de investimentos licenciada (CVM), e que decisões finais são do usuário.`;
 
   const user = `Valor disponível para investir este mês: R$ ${valorBase.toFixed(2)}.
-Perfil de risco do investidor: ${RISK_LABELS[perfil]}.
-Sugira uma alocação adequada a esse valor e perfil.`;
+Perfil de risco: ${RISK_LABELS[perfil]}.
+Pesquise informações atuais e monte a alocação diversificada e explicada conforme as instruções.`;
 
   return { system, user };
 }
 
-function parseSuggestion(raw: string): InvestmentSuggestionPayload {
-  const parsed = JSON.parse(raw);
+function parseSuggestion(raw: string): Omit<InvestmentSuggestionPayload, "fontes"> {
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+
   if (
     typeof parsed.resumo !== "string" ||
     !Array.isArray(parsed.alocacao) ||
@@ -40,12 +75,117 @@ function parseSuggestion(raw: string): InvestmentSuggestionPayload {
     if (
       typeof item.categoria !== "string" ||
       typeof item.percentual !== "number" ||
-      typeof item.justificativa !== "string"
+      typeof item.explicacao !== "string" ||
+      typeof item.como_investir !== "string"
     ) {
       throw new Error("Formato de alocação inesperado.");
     }
+    if (item.risco !== "baixo" && item.risco !== "medio" && item.risco !== "alto") {
+      item.risco = "medio";
+    }
   }
-  return parsed as InvestmentSuggestionPayload;
+  return parsed as Omit<InvestmentSuggestionPayload, "fontes">;
+}
+
+interface GroqSearchResult {
+  title?: string;
+  url?: string;
+}
+
+interface GroqMessage {
+  content?: string;
+  executed_tools?: { search_results?: { results?: GroqSearchResult[] } }[];
+}
+
+function extractFontes(message: GroqMessage): FonteConsultada[] {
+  const fontes: FonteConsultada[] = [];
+  const seen = new Set<string>();
+
+  for (const tool of message.executed_tools ?? []) {
+    for (const result of tool.search_results?.results ?? []) {
+      if (!result.url || seen.has(result.url)) continue;
+      seen.add(result.url);
+      fontes.push({ titulo: result.title || result.url, url: result.url });
+    }
+  }
+
+  return fontes.slice(0, 10);
+}
+
+const MIN_RETRY_WAIT_MS = 3000;
+
+function parseRetryAfterMs(message: string): number {
+  const match = message.match(/try again in ([\d.]+)s/i);
+  const reported = match ? Math.ceil(parseFloat(match[1]) * 1000) + 500 : 5000;
+  // Groq às vezes reporta uma espera curta (ex: 800ms) que não é suficiente
+  // na prática para o bucket de tokens recarregar — força um piso mínimo.
+  return Math.min(Math.max(reported, MIN_RETRY_WAIT_MS), MAX_RETRY_WAIT_MS);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function callGroq(
+  apiKey: string,
+  system: string,
+  userPrompt: string
+): Promise<{ message?: GroqMessage; error?: string }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.4,
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timeout);
+      console.error("Groq fetch failed", err);
+      return { error: "Falha ao conectar com a Groq. Tente novamente." };
+    }
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const data = await response.json();
+      return { message: data.choices?.[0]?.message };
+    }
+
+    const bodyText = await response.text().catch(() => "");
+    let detail = bodyText;
+    try {
+      detail = JSON.parse(bodyText)?.error?.message ?? bodyText;
+    } catch {
+      // corpo não é JSON, usa o texto cru mesmo
+    }
+    console.error("Groq API error", response.status, bodyText);
+
+    if (response.status === 429 && attempt === 0) {
+      await sleep(parseRetryAfterMs(detail));
+      continue;
+    }
+
+    return {
+      error: `Groq respondeu com erro (${response.status})${detail ? `: ${detail}` : ""}. Tente novamente em alguns instantes.`,
+    };
+  }
+
+  return { error: "A Groq está com alta demanda no momento. Tente novamente em alguns instantes." };
 }
 
 export async function generateInvestmentSuggestion(
@@ -67,11 +207,12 @@ export async function generateInvestmentSuggestion(
   const { from, to } = monthRange(mes);
 
   const [{ data: profile }, { data: transactionsRaw }] = await Promise.all([
-    supabase.from("profiles").select("perfil_risco").eq("user_id", user.id).single(),
+    supabase.from("profiles").select("perfil_risco, experiencia").eq("user_id", user.id).single(),
     supabase.from("transactions").select("*").gte("data", from).lte("data", to),
   ]);
 
   const perfil = (profile?.perfil_risco ?? "moderado") as PerfilRisco;
+  const experiencia = (profile?.experiencia ?? "iniciante") as Experiencia;
   const transactions = (transactionsRaw ?? []) as unknown as Transaction[];
   const { entradas, saidas } = monthTotals(transactions);
   const valorBase = Math.round((entradas - saidas) * 100) / 100;
@@ -83,70 +224,34 @@ export async function generateInvestmentSuggestion(
     };
   }
 
-  const { system, user: userPrompt } = buildPrompt(valorBase, perfil);
-
-  let content: string;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-
-    const response = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const bodyText = await response.text().catch(() => "");
-      let detail = bodyText;
-      try {
-        detail = JSON.parse(bodyText)?.error?.message ?? bodyText;
-      } catch {
-        // corpo não é JSON, usa o texto cru mesmo
-      }
-      console.error("Groq API error", response.status, bodyText);
-      return {
-        error: `Groq respondeu com erro (${response.status})${detail ? `: ${detail}` : ""}. Tente novamente.`,
-      };
-    }
-
-    const data = await response.json();
-    content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      return { error: "Resposta vazia da IA. Tente novamente." };
-    }
-  } catch (err) {
-    console.error("Groq fetch failed", err);
-    return { error: "Falha ao conectar com a Groq. Tente novamente." };
+  const { system, user: userPrompt } = buildPrompt(valorBase, perfil, experiencia);
+  const { message, error } = await callGroq(apiKey, system, userPrompt);
+  if (error || !message) {
+    return { error: error ?? "Resposta vazia da IA. Tente novamente." };
+  }
+  if (!message.content) {
+    return { error: "Resposta vazia da IA. Tente novamente." };
   }
 
-  let sugestao: InvestmentSuggestionPayload;
+  let base: Omit<InvestmentSuggestionPayload, "fontes">;
   try {
-    sugestao = parseSuggestion(content);
+    base = parseSuggestion(message.content);
   } catch (err) {
-    console.error("Groq response parse failed", err, content);
+    console.error("Groq response parse failed", err, message.content);
     return { error: "A IA respondeu em um formato inesperado. Tente novamente." };
   }
+
+  const sugestao: InvestmentSuggestionPayload = {
+    ...base,
+    fontes: extractFontes(message),
+  };
 
   const { error: insertError } = await supabase.from("investment_suggestions").insert({
     user_id: user.id,
     mes_referencia: `${mes}-01`,
     valor_base: valorBase,
     perfil_risco: perfil,
+    experiencia,
     sugestao: sugestao as unknown as Json,
     modelo: GROQ_MODEL,
   });
@@ -157,7 +262,7 @@ export async function generateInvestmentSuggestion(
   return {};
 }
 
-export async function updateRiskProfile(
+export async function updateInvestorProfile(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
@@ -167,15 +272,27 @@ export async function updateRiskProfile(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Sessão expirada." };
 
-  const perfil = String(formData.get("perfil_risco") ?? "") as PerfilRisco;
-  if (!["conservador", "moderado", "arrojado"].includes(perfil)) {
-    return { error: "Perfil inválido." };
+  const updates: { perfil_risco?: PerfilRisco; experiencia?: Experiencia } = {};
+
+  const perfil = formData.get("perfil_risco");
+  if (perfil !== null) {
+    if (!["conservador", "moderado", "arrojado"].includes(String(perfil))) {
+      return { error: "Perfil de risco inválido." };
+    }
+    updates.perfil_risco = perfil as PerfilRisco;
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ perfil_risco: perfil })
-    .eq("user_id", user.id);
+  const experiencia = formData.get("experiencia");
+  if (experiencia !== null) {
+    if (!["iniciante", "intermediario", "avancado"].includes(String(experiencia))) {
+      return { error: "Nível de experiência inválido." };
+    }
+    updates.experiencia = experiencia as Experiencia;
+  }
+
+  if (Object.keys(updates).length === 0) return {};
+
+  const { error } = await supabase.from("profiles").update(updates).eq("user_id", user.id);
 
   if (error) return { error: error.message };
 

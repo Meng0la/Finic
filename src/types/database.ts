@@ -163,6 +163,7 @@ export type Database = {
           mes_referencia: string;
           valor_base: number;
           perfil_risco: string;
+          experiencia: string;
           sugestao: Json;
           modelo: string;
           created_at: string;
@@ -173,6 +174,7 @@ export type Database = {
           mes_referencia: string;
           valor_base: number;
           perfil_risco: string;
+          experiencia?: string;
           sugestao: Json;
           modelo?: string;
           created_at?: string;
@@ -183,6 +185,7 @@ export type Database = {
           mes_referencia?: string;
           valor_base?: number;
           perfil_risco?: string;
+          experiencia?: string;
           sugestao?: Json;
           modelo?: string;
           created_at?: string;
@@ -193,16 +196,19 @@ export type Database = {
         Row: {
           user_id: string;
           perfil_risco: string;
+          experiencia: string;
           updated_at: string;
         };
         Insert: {
           user_id: string;
           perfil_risco?: string;
+          experiencia?: string;
           updated_at?: string;
         };
         Update: {
           user_id?: string;
           perfil_risco?: string;
+          experiencia?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -351,6 +357,7 @@ export type Recorrencia = "unica" | "fixa_mensal" | "parcelada";
 export type Origem = "web" | "whatsapp";
 export type TransacaoStatus = "ativo" | "estornado";
 export type PerfilRisco = "conservador" | "moderado" | "arrojado";
+export type Experiencia = "iniciante" | "intermediario" | "avancado";
 
 type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
@@ -376,24 +383,34 @@ export interface Transaction extends Omit<TransactionRow, "tipo" | "recorrencia"
 
 export type Budget = BudgetRow;
 
-export interface Profile extends Omit<ProfileRow, "perfil_risco"> {
+export interface Profile extends Omit<ProfileRow, "perfil_risco" | "experiencia"> {
   perfil_risco: PerfilRisco;
+  experiencia: Experiencia;
 }
 
 export interface AllocationItem {
   categoria: string;
   percentual: number;
-  justificativa: string;
+  risco: "baixo" | "medio" | "alto";
+  explicacao: string;
+  como_investir: string;
+}
+
+export interface FonteConsultada {
+  titulo: string;
+  url: string;
 }
 
 export interface InvestmentSuggestionPayload {
   resumo: string;
   alocacao: AllocationItem[];
   alertas: string[];
+  fontes: FonteConsultada[];
 }
 
 export interface InvestmentSuggestion
-  extends Omit<InvestmentSuggestionRow, "perfil_risco" | "sugestao"> {
+  extends Omit<InvestmentSuggestionRow, "perfil_risco" | "experiencia" | "sugestao"> {
   perfil_risco: PerfilRisco;
+  experiencia: Experiencia;
   sugestao: InvestmentSuggestionPayload;
 }

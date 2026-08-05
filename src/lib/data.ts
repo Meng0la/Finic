@@ -61,7 +61,14 @@ export async function getProfile(): Promise<Profile | null> {
     .eq("user_id", user.id)
     .single();
 
-  return (data as Profile | null) ?? { user_id: user.id, perfil_risco: "moderado" as PerfilRisco, updated_at: "" };
+  return (
+    (data as Profile | null) ?? {
+      user_id: user.id,
+      perfil_risco: "moderado" as PerfilRisco,
+      experiencia: "iniciante" as Profile["experiencia"],
+      updated_at: "",
+    }
+  );
 }
 
 export async function getInvestmentSuggestions(limit = 5): Promise<InvestmentSuggestion[]> {
