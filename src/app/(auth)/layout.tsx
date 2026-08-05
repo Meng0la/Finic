@@ -9,6 +9,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="font-display text-4xl font-semibold tracking-wide text-gold-strong lg:text-5xl">
             Finic
           </span>
+          <p className="font-display mt-3 text-base italic text-gold-soft lg:text-lg">
+            &ldquo;Fino cuidado com suas finanças.&rdquo;
+          </p>
           <div className="mx-auto my-5 h-px w-14 bg-gradient-to-r from-transparent via-gold to-transparent" />
           <p className="text-xs uppercase tracking-[0.3em] text-[#c7cfe0]">
             Controle financeiro pessoal

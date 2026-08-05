@@ -9,6 +9,9 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <span className="font-display text-3xl font-semibold tracking-wide text-gold-strong">
             Finic
           </span>
+          <p className="font-display mt-2 text-sm italic text-gold-soft">
+            &ldquo;Fino cuidado com suas finanças.&rdquo;
+          </p>
         </div>
         <div className="surface-card overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.45)]">
           <div className="h-1 w-full bg-gradient-to-r from-gold-soft via-gold to-gold-strong" />
