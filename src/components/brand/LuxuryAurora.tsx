@@ -1,14 +1,24 @@
-const PARTICLES = Array.from({ length: 22 }).map((_, i) => {
-  const left = (i * 43) % 100;
-  const size = 2 + (i % 3);
-  const delay = (i * 1.7) % 14;
-  const duration = 12 + (i % 5) * 2.5;
-  const drift = ((i % 5) - 2) * 16;
-  const opacity = 0.35 + (i % 4) * 0.1;
-  return { left, size, delay, duration, drift, opacity };
-});
+function buildParticles(count: number) {
+  return Array.from({ length: count }).map((_, i) => {
+    const left = (i * 43) % 100;
+    const size = 2 + (i % 3);
+    const delay = (i * 1.7) % 14;
+    const duration = 12 + (i % 5) * 2.5;
+    const drift = ((i % 5) - 2) * 16;
+    const opacity = 0.35 + (i % 4) * 0.1;
+    return { left, size, delay, duration, drift, opacity };
+  });
+}
 
-export function LuxuryAurora() {
+export function LuxuryAurora({
+  particleCount = 22,
+  vignette = true,
+}: {
+  particleCount?: number;
+  vignette?: boolean;
+}) {
+  const particles = buildParticles(particleCount);
+
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="aurora-blob aurora-blob-1" />
@@ -16,7 +26,7 @@ export function LuxuryAurora() {
       <div className="aurora-blob aurora-blob-3" />
       <div className="luxury-grid" />
       <div className="luxury-shimmer" />
-      {PARTICLES.map((p, i) => (
+      {particles.map((p, i) => (
         <span
           key={i}
           className="luxury-particle"
@@ -31,7 +41,7 @@ export function LuxuryAurora() {
           }}
         />
       ))}
-      <div className="luxury-vignette" />
+      {vignette && <div className="luxury-vignette" />}
     </div>
   );
 }

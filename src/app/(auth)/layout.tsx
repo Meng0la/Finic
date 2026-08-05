@@ -1,4 +1,4 @@
-import { LuxuryAurora } from "@/components/auth/LuxuryAurora";
+import { LuxuryAurora } from "@/components/brand/LuxuryAurora";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

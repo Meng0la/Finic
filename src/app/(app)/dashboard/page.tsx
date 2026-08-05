@@ -12,6 +12,7 @@ import {
 } from "@/lib/finance";
 import { CategoryPieChart, MonthlyComparisonChart } from "@/components/dashboard/DashboardCharts";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { LuxuryAurora } from "@/components/brand/LuxuryAurora";
 
 function KpiCard({ label, value, tone }: { label: string; value: string; tone?: "up" | "down" }) {
   return (
@@ -54,13 +55,16 @@ export default async function DashboardPage() {
       <PageHeader eyebrow="Visão geral" title="Painel" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="surface-card bg-navy p-6 sm:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-soft">
-            Saldo consolidado
-          </p>
-          <p className="font-display mt-2 text-4xl font-semibold text-gold-strong">
-            {formatBRL(saldo)}
-          </p>
+        <div className="surface-card relative overflow-hidden bg-navy p-6 sm:col-span-2">
+          <LuxuryAurora particleCount={12} vignette={false} />
+          <div className="relative z-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gold-soft">
+              Saldo consolidado
+            </p>
+            <p className="font-display mt-2 text-4xl font-semibold text-gold-strong">
+              {formatBRL(saldo)}
+            </p>
+          </div>
         </div>
         <KpiCard label="Entradas do mês" value={formatBRL(entradas)} tone="up" />
         <KpiCard label="Saídas do mês" value={formatBRL(saidas)} tone="down" />
