@@ -52,7 +52,7 @@ export async function generateInvestmentSuggestion(
   _prevState: ActionState,
   _formData: FormData
 ): Promise<ActionState> {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) {
     return { error: "GROQ_API_KEY não configurada no servidor." };
   }
