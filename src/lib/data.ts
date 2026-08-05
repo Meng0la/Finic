@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
   Account,
+  AuditLogEntry,
   Budget,
   Category,
   InvestmentSuggestion,
@@ -79,4 +80,14 @@ export async function getInvestmentSuggestions(limit = 5): Promise<InvestmentSug
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as unknown as InvestmentSuggestion[];
+}
+
+export async function getAuditLog(limit = 100): Promise<AuditLogEntry[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("audit_log")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as AuditLogEntry[];
 }

@@ -61,8 +61,8 @@ export default async function InvestimentosPage() {
         superavit > 0 && (
           <p className="text-sm text-ink-muted">
             Nenhuma sugestão gerada ainda este mês. Clique em &quot;Gerar sugestão&quot; acima —
-            a IA pesquisa dados atuais na internet antes de montar a alocação, então pode levar
-            meio minuto.
+            a IA consulta a Selic, o CDI e o IPCA atuais no Banco Central antes de montar a
+            alocação.
           </p>
         )
       )}
@@ -78,11 +78,12 @@ export default async function InvestimentosPage() {
 
       <p className="text-xs text-ink-muted">
         As sugestões acima são geradas por inteligência artificial com base nos seus lançamentos e
-        em pesquisas feitas na internet no momento da geração — não constituem consultoria de
-        investimentos licenciada (CVM). Os links de &quot;fontes consultadas&quot; são páginas que a IA
-        pesquisou para embasar a resposta, não links de compra: a aplicação em si é sempre feita
-        por você, diretamente na sua corretora ou banco. Use como ponto de partida informativo —
-        decisões finais são sempre suas.
+        nas taxas oficiais do Banco Central (Selic, CDI, IPCA) no momento da geração — não
+        constituem consultoria de investimentos licenciada (CVM). Nomes específicos de produtos
+        são exemplos ilustrativos, não ofertas em tempo real, e os links de &quot;fontes
+        consultadas&quot; apontam para as páginas oficiais dessas taxas, não são links de compra: a
+        aplicação em si é sempre feita por você, diretamente na sua corretora ou banco. Use como
+        ponto de partida informativo — decisões finais são sempre suas.
       </p>
     </div>
   );

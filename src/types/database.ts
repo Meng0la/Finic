@@ -365,6 +365,7 @@ type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type BudgetRow = Database["public"]["Tables"]["budgets"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type InvestmentSuggestionRow = Database["public"]["Tables"]["investment_suggestions"]["Row"];
+type AuditLogRow = Database["public"]["Tables"]["audit_log"]["Row"];
 
 export interface Account extends Omit<AccountRow, "tipo"> {
   tipo: ContaTipo;
@@ -382,6 +383,13 @@ export interface Transaction extends Omit<TransactionRow, "tipo" | "recorrencia"
 }
 
 export type Budget = BudgetRow;
+
+export type AuditLogAcao = "insert" | "update" | "soft_delete" | "estorno";
+
+export interface AuditLogEntry extends Omit<AuditLogRow, "acao" | "origem"> {
+  acao: AuditLogAcao;
+  origem: Origem | "sistema";
+}
 
 export interface Profile extends Omit<ProfileRow, "perfil_risco" | "experiencia"> {
   perfil_risco: PerfilRisco;

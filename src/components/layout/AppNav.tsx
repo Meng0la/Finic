@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/categorias", label: "Categorias" },
   { href: "/orcamentos", label: "Orçamentos" },
   { href: "/investimentos", label: "Investimentos" },
+  { href: "/historico", label: "Histórico" },
 ];
 
 export function AppNav() {
