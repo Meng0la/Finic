@@ -4,10 +4,17 @@ export function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function accountBalance(account: Account, transactions: Transaction[]): number {
+export function accountBalance(
+  account: Account,
+  transactions: Transaction[],
+  today = new Date()
+): number {
+  const todayStr = today.toISOString().slice(0, 10);
   let saldo = account.saldo_inicial;
   for (const t of transactions) {
-    if (t.status !== "ativo") continue;
+    // Lançamentos futuros (parcelas/recorrências ainda não vencidas) não
+    // entram no saldo atual — só contam quando a data chegar.
+    if (t.status !== "ativo" || t.data > todayStr) continue;
     if (t.account_id === account.id) {
       if (t.tipo === "receita") saldo += t.valor;
       else if (t.tipo === "despesa") saldo -= t.valor;

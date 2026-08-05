@@ -111,7 +111,17 @@ export async function generateInvestmentSuggestion(
     clearTimeout(timeout);
 
     if (!response.ok) {
-      return { error: `Groq respondeu com erro (${response.status}). Tente novamente.` };
+      const bodyText = await response.text().catch(() => "");
+      let detail = bodyText;
+      try {
+        detail = JSON.parse(bodyText)?.error?.message ?? bodyText;
+      } catch {
+        // corpo não é JSON, usa o texto cru mesmo
+      }
+      console.error("Groq API error", response.status, bodyText);
+      return {
+        error: `Groq respondeu com erro (${response.status})${detail ? `: ${detail}` : ""}. Tente novamente.`,
+      };
     }
 
     const data = await response.json();
@@ -119,14 +129,16 @@ export async function generateInvestmentSuggestion(
     if (!content) {
       return { error: "Resposta vazia da IA. Tente novamente." };
     }
-  } catch {
+  } catch (err) {
+    console.error("Groq fetch failed", err);
     return { error: "Falha ao conectar com a Groq. Tente novamente." };
   }
 
   let sugestao: InvestmentSuggestionPayload;
   try {
     sugestao = parseSuggestion(content);
-  } catch {
+  } catch (err) {
+    console.error("Groq response parse failed", err, content);
     return { error: "A IA respondeu em um formato inesperado. Tente novamente." };
   }
 
