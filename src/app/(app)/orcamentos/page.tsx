@@ -1,5 +1,5 @@
 import { getBudgets, getCategories, getTransactions } from "@/lib/data";
-import { currentMonthRef, formatBRL, monthRange } from "@/lib/finance";
+import { currentMonthRef, formatBRL, monthRange, monthTotals } from "@/lib/finance";
 import { deleteBudget } from "@/lib/actions/budgets";
 import { BudgetForm } from "@/components/budgets/BudgetForm";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -20,9 +20,84 @@ export default async function OrcamentosPage() {
     gastoPorCategoria.set(t.category_id, (gastoPorCategoria.get(t.category_id) ?? 0) + t.valor);
   }
 
+  const { entradas } = monthTotals(transactions);
+  const totalOrcado = budgets.reduce((sum, b) => sum + b.limite_mensal, 0);
+  const totalGastoOrcado = budgets.reduce(
+    (sum, b) => sum + (gastoPorCategoria.get(b.category_id) ?? 0),
+    0
+  );
+
+  const categoriaInvestimentos = categories.find(
+    (c) => c.nome === "Investimentos" && c.tipo === "despesa"
+  );
+  const investimentosTemOrcamento = categoriaInvestimentos
+    ? budgets.some((b) => b.category_id === categoriaInvestimentos.id)
+    : true;
+  const gastoInvestimentos = categoriaInvestimentos
+    ? (gastoPorCategoria.get(categoriaInvestimentos.id) ?? 0)
+    : 0;
+  // Se Investimentos já tem orçamento próprio, ele já está dentro de
+  // totalGastoOrcado — evita contar o valor duas vezes na renda comprometida.
+  const investimentosForaDoOrcamento = investimentosTemOrcamento ? 0 : gastoInvestimentos;
+
+  const totalComprometido = totalGastoOrcado + investimentosForaDoOrcamento;
+  const percentualOrcamento = entradas > 0 ? Math.round((totalGastoOrcado / entradas) * 100) : 0;
+  const percentualInvestimentos =
+    entradas > 0 ? Math.round((investimentosForaDoOrcamento / entradas) * 100) : 0;
+  const percentualComprometido = entradas > 0 ? Math.round((totalComprometido / entradas) * 100) : 0;
+  const percentualLivre = Math.max(0, 100 - percentualComprometido);
+
+  const mostrarResumo = budgets.length > 0 || gastoInvestimentos > 0;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Planejamento" title="Orçamentos" meta={mes} />
+
+      {mostrarResumo && (
+        <div className="surface-card p-6">
+          <div className="mb-1 flex items-baseline justify-between">
+            <span className="field-label">Renda comprometida este mês</span>
+            <span className="font-display text-2xl font-semibold text-ink">
+              {entradas > 0 ? `${percentualComprometido}%` : "—"}
+            </span>
+          </div>
+          <p className="mb-4 text-xs text-ink-muted">
+            {entradas > 0
+              ? `De ${formatBRL(entradas)} em entradas, ${formatBRL(totalComprometido)} já está comprometido com orçamentos e investimentos.`
+              : "Sem entradas registradas este mês para calcular o percentual."}
+          </p>
+
+          {entradas > 0 && (
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-alt">
+              {percentualOrcamento > 0 && (
+                <div className="h-full bg-navy" style={{ width: `${percentualOrcamento}%` }} />
+              )}
+              {percentualInvestimentos > 0 && (
+                <div className="h-full bg-gold" style={{ width: `${percentualInvestimentos}%` }} />
+              )}
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs">
+            <span className="flex items-center gap-1.5 text-ink-muted">
+              <span className="h-2 w-2 rounded-full bg-navy" />
+              Orçamentos: {formatBRL(totalGastoOrcado)} de {formatBRL(totalOrcado)} orçado (
+              {percentualOrcamento}%)
+            </span>
+            {gastoInvestimentos > 0 && (
+              <span className="flex items-center gap-1.5 text-ink-muted">
+                <span className="h-2 w-2 rounded-full bg-gold" />
+                Investimentos: {formatBRL(gastoInvestimentos)}
+                {investimentosTemOrcamento ? " (dentro do orçamento acima)" : ` (${percentualInvestimentos}%)`}
+              </span>
+            )}
+            <span className="flex items-center gap-1.5 text-ink-muted">
+              <span className="h-2 w-2 rounded-full bg-surface-alt ring-1 ring-inset ring-border" />
+              Livre: {percentualLivre}%
+            </span>
+          </div>
+        </div>
+      )}
 
       {budgets.length === 0 ? (
         <p className="text-sm text-ink-muted">Nenhum orçamento definido para este mês.</p>
