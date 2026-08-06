@@ -1,8 +1,9 @@
 import { getBudgets, getCategories, getTransactions } from "@/lib/data";
-import { currentMonthRef, formatBRL, monthRange, monthTotals } from "@/lib/finance";
+import { currentMonthRef, daysLeftInMonth, formatBRL, monthRange, monthTotals } from "@/lib/finance";
 import { deleteBudget } from "@/lib/actions/budgets";
 import { BudgetForm } from "@/components/budgets/BudgetForm";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RegraCincoTresDois } from "@/components/budgets/RegraCincoTresDois";
 
 export default async function OrcamentosPage() {
   const mes = currentMonthRef();
@@ -46,6 +47,10 @@ export default async function OrcamentosPage() {
     entradas > 0 ? Math.round((investimentosForaDoOrcamento / entradas) * 100) : 0;
   const percentualComprometido = entradas > 0 ? Math.round((totalComprometido / entradas) * 100) : 0;
   const percentualLivre = Math.max(0, 100 - percentualComprometido);
+
+  const diasRestantes = daysLeftInMonth(mes);
+  const totalRestanteOrcado = Math.max(0, totalOrcado - totalGastoOrcado);
+  const disponivelPorDia = totalRestanteOrcado / diasRestantes;
 
   const mostrarResumo = budgets.length > 0 || gastoInvestimentos > 0;
 
@@ -96,8 +101,19 @@ export default async function OrcamentosPage() {
               Livre: {percentualLivre}%
             </span>
           </div>
+
+          {totalOrcado > 0 && (
+            <p className="mt-3 text-xs text-ink-muted">
+              Sobram {formatBRL(totalRestanteOrcado)} de orçamento para {diasRestantes}{" "}
+              {diasRestantes === 1 ? "dia" : "dias"} — cerca de{" "}
+              <span className="font-medium text-ink">{formatBRL(disponivelPorDia)}/dia</span> até o
+              fim do mês.
+            </p>
+          )}
         </div>
       )}
+
+      <RegraCincoTresDois categories={categories} transactions={transactions} entradas={entradas} />
 
       {budgets.length === 0 ? (
         <p className="text-sm text-ink-muted">Nenhum orçamento definido para este mês.</p>
@@ -109,6 +125,8 @@ export default async function OrcamentosPage() {
             const percentual = Math.min(100, Math.round((gasto / b.limite_mensal) * 100));
             const alerta =
               percentual >= 100 ? "bg-wine" : percentual >= 80 ? "bg-amber" : "bg-emerald";
+            const restanteCategoria = Math.max(0, b.limite_mensal - gasto);
+            const porDiaCategoria = restanteCategoria / diasRestantes;
 
             return (
               <li key={b.id} className="surface-card p-6">
@@ -139,6 +157,11 @@ export default async function OrcamentosPage() {
                 {percentual >= 80 && (
                   <p className="mt-2 text-xs text-amber">
                     {percentual >= 100 ? "Limite atingido." : "80% do limite atingido."}
+                  </p>
+                )}
+                {restanteCategoria > 0 && (
+                  <p className="mt-2 text-xs text-ink-muted">
+                    {formatBRL(porDiaCategoria)}/dia disponível até o fim do mês.
                   </p>
                 )}
               </li>

@@ -127,6 +127,7 @@ export type Database = {
         Row: {
           cor: string;
           created_at: string;
+          grupo_orcamentario: string | null;
           icone: string;
           id: string;
           is_padrao: boolean;
@@ -137,6 +138,7 @@ export type Database = {
         Insert: {
           cor?: string;
           created_at?: string;
+          grupo_orcamentario?: string | null;
           icone?: string;
           id?: string;
           is_padrao?: boolean;
@@ -147,6 +149,7 @@ export type Database = {
         Update: {
           cor?: string;
           created_at?: string;
+          grupo_orcamentario?: string | null;
           icone?: string;
           id?: string;
           is_padrao?: boolean;
@@ -155,6 +158,102 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      bills: {
+        Row: {
+          id: string;
+          user_id: string;
+          nome: string;
+          valor: number;
+          dia_vencimento: number;
+          category_id: string | null;
+          account_id: string | null;
+          ativo: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          nome: string;
+          valor: number;
+          dia_vencimento: number;
+          category_id?: string | null;
+          account_id?: string | null;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          nome?: string;
+          valor?: number;
+          dia_vencimento?: number;
+          category_id?: string | null;
+          account_id?: string | null;
+          ativo?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bills_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bills_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      bill_payments: {
+        Row: {
+          id: string;
+          bill_id: string;
+          user_id: string;
+          mes_referencia: string;
+          transaction_id: string | null;
+          paid_at: string;
+        };
+        Insert: {
+          id?: string;
+          bill_id: string;
+          user_id: string;
+          mes_referencia: string;
+          transaction_id?: string | null;
+          paid_at?: string;
+        };
+        Update: {
+          id?: string;
+          bill_id?: string;
+          user_id?: string;
+          mes_referencia?: string;
+          transaction_id?: string | null;
+          paid_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bill_payments_bill_id_fkey";
+            columns: ["bill_id"];
+            isOneToOne: false;
+            referencedRelation: "bills";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bill_payments_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "transactions";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       investment_suggestions: {
         Row: {
@@ -406,14 +505,22 @@ type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type InvestmentSuggestionRow = Database["public"]["Tables"]["investment_suggestions"]["Row"];
 type AuditLogRow = Database["public"]["Tables"]["audit_log"]["Row"];
 type GoalRow = Database["public"]["Tables"]["goals"]["Row"];
+type BillRow = Database["public"]["Tables"]["bills"]["Row"];
+type BillPaymentRow = Database["public"]["Tables"]["bill_payments"]["Row"];
 
 export interface Account extends Omit<AccountRow, "tipo"> {
   tipo: ContaTipo;
 }
 
-export interface Category extends Omit<CategoryRow, "tipo"> {
+export type GrupoOrcamentario = "essencial" | "desejo" | "investimento";
+
+export interface Category extends Omit<CategoryRow, "tipo" | "grupo_orcamentario"> {
   tipo: CategoriaTipo;
+  grupo_orcamentario: GrupoOrcamentario | null;
 }
+
+export type Bill = BillRow;
+export type BillPayment = BillPaymentRow;
 
 export interface Transaction extends Omit<TransactionRow, "tipo" | "recorrencia" | "origem" | "status"> {
   tipo: TransacaoTipo;

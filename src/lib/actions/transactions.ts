@@ -66,6 +66,42 @@ async function checkBudgetAlert(
   return undefined;
 }
 
+const MESES_HISTORICO_ANOMALIA = 3;
+const MULTIPLICADOR_ANOMALIA = 2;
+
+async function checkValorAnomalo(
+  supabase: SupabaseServerClient,
+  userId: string,
+  categoryId: string,
+  data: string,
+  valor: number
+): Promise<string | undefined> {
+  const inicioMesAtual = new Date(`${data.slice(0, 7)}-01T00:00:00`);
+  const inicioHistorico = new Date(inicioMesAtual);
+  inicioHistorico.setMonth(inicioHistorico.getMonth() - MESES_HISTORICO_ANOMALIA);
+  const fimHistorico = new Date(inicioMesAtual);
+  fimHistorico.setDate(fimHistorico.getDate() - 1);
+
+  const { data: historico } = await supabase
+    .from("transactions")
+    .select("valor")
+    .eq("user_id", userId)
+    .eq("category_id", categoryId)
+    .eq("tipo", "despesa")
+    .eq("status", "ativo")
+    .gte("data", inicioHistorico.toISOString().slice(0, 10))
+    .lte("data", fimHistorico.toISOString().slice(0, 10));
+
+  const valores = (historico ?? []).map((h) => h.valor);
+  if (valores.length < 2) return undefined;
+
+  const media = valores.reduce((sum, v) => sum + v, 0) / valores.length;
+  if (media <= 0 || valor < media * MULTIPLICADOR_ANOMALIA) return undefined;
+
+  const percentualAcima = Math.round(((valor - media) / media) * 100);
+  return `Esse valor é ${percentualAcima}% maior que a média dessa categoria nos últimos meses (${formatBRL(media)}).`;
+}
+
 export async function createTransaction(
   _prevState: ActionState,
   formData: FormData
@@ -163,12 +199,17 @@ export async function createTransaction(
   revalidatePath("/transacoes");
   revalidatePath("/dashboard");
 
-  const warning =
-    tipo === "despesa" && categoryId
-      ? await checkBudgetAlert(supabase, user.id, categoryId, data)
-      : undefined;
+  const warnings: string[] = [];
+  if (tipo === "despesa" && categoryId) {
+    const [budgetWarning, anomalyWarning] = await Promise.all([
+      checkBudgetAlert(supabase, user.id, categoryId, data),
+      checkValorAnomalo(supabase, user.id, categoryId, data, valor),
+    ]);
+    if (budgetWarning) warnings.push(budgetWarning);
+    if (anomalyWarning) warnings.push(anomalyWarning);
+  }
 
-  return warning ? { warning } : {};
+  return warnings.length > 0 ? { warning: warnings.join(" ") } : {};
 }
 
 export async function reverseTransaction(id: string) {

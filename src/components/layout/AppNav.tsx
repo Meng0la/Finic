@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/contas", label: "Contas" },
   { href: "/categorias", label: "Categorias" },
   { href: "/orcamentos", label: "Orçamentos" },
+  { href: "/contas-a-pagar", label: "Contas a Pagar" },
   { href: "/metas", label: "Metas" },
   { href: "/investimentos", label: "Investimentos" },
   { href: "/historico", label: "Histórico" },

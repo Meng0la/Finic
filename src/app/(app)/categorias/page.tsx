@@ -2,11 +2,20 @@ import { getCategories, getTransactions } from "@/lib/data";
 import { deleteCategory } from "@/lib/actions/categories";
 import { CategoryForm } from "@/components/categories/CategoryForm";
 import { CategoryComparison } from "@/components/categories/CategoryComparison";
+import { CategoryGroupSelect } from "@/components/categories/CategoryGroupSelect";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { categoryComparison, currentMonthRef, monthRange, shiftMonthRef } from "@/lib/finance";
 import type { Category } from "@/types/database";
 
-function CategoryGroup({ title, items }: { title: string; items: Category[] }) {
+function CategoryGroup({
+  title,
+  items,
+  mostrarGrupo,
+}: {
+  title: string;
+  items: Category[];
+  mostrarGrupo?: boolean;
+}) {
   return (
     <div className="surface-card p-6">
       <h2 className="field-label mb-3">{title}</h2>
@@ -18,6 +27,7 @@ function CategoryGroup({ title, items }: { title: string; items: Category[] }) {
           >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.cor }} />
             {c.nome}
+            {mostrarGrupo && <CategoryGroupSelect categoryId={c.id} value={c.grupo_orcamentario} />}
             {!c.is_padrao && (
               <form
                 action={async () => {
@@ -58,7 +68,11 @@ export default async function CategoriasPage() {
       <PageHeader eyebrow="Organização" title="Categorias" />
       <CategoryComparison items={comparativo} />
       <CategoryGroup title="Receitas" items={receitas} />
-      <CategoryGroup title="Despesas" items={despesas} />
+      <CategoryGroup title="Despesas" items={despesas} mostrarGrupo />
+      <p className="text-xs text-ink-muted">
+        O grupo (essencial/desejo/investimento) de cada categoria de despesa é usado no card
+        &quot;Regra 50/30/20&quot; da página de Orçamentos.
+      </p>
       <CategoryForm />
     </div>
   );

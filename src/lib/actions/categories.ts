@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { CategoriaTipo } from "@/types/database";
+import type { CategoriaTipo, GrupoOrcamentario } from "@/types/database";
 import type { ActionState } from "@/lib/actions/accounts";
 
 export async function createCategory(
@@ -42,4 +42,21 @@ export async function deleteCategory(id: string) {
   const supabase = await createClient();
   await supabase.from("categories").delete().eq("id", id);
   revalidatePath("/categorias");
+}
+
+export async function updateCategoryGroup(id: string, grupo: GrupoOrcamentario | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase
+    .from("categories")
+    .update({ grupo_orcamentario: grupo })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  revalidatePath("/categorias");
+  revalidatePath("/orcamentos");
 }

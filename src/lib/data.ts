@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   Account,
   AuditLogEntry,
+  Bill,
+  BillPayment,
   Budget,
   Category,
   Goal,
@@ -107,6 +109,25 @@ export async function getAuditLog(limit = 100): Promise<AuditLogEntry[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as unknown as AuditLogEntry[];
+}
+
+export async function getBills(): Promise<Bill[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("bills")
+    .select("*")
+    .eq("ativo", true)
+    .order("dia_vencimento", { ascending: true });
+  return (data ?? []) as unknown as Bill[];
+}
+
+export async function getBillPayments(mesReferencia: string): Promise<BillPayment[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("bill_payments")
+    .select("*")
+    .eq("mes_referencia", `${mesReferencia}-01`);
+  return (data ?? []) as unknown as BillPayment[];
 }
 
 export async function getGoals(): Promise<Goal[]> {

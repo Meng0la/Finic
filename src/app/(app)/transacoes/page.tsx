@@ -66,6 +66,12 @@ export default async function TransacoesPage({
             >
               Exportar CSV
             </a>
+            <Link
+              href="/transacoes/importar"
+              className="text-xs font-medium text-ink-muted hover:text-gold"
+            >
+              Importar CSV
+            </Link>
           </div>
         }
       />

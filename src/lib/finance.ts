@@ -170,6 +170,64 @@ export function categoryComparison(
 }
 
 /**
+ * Dias restantes no mês de referência, incluindo hoje. Só faz sentido para o
+ * mês corrente — para meses passados/futuros devolve o total de dias do mês.
+ */
+export function daysLeftInMonth(mesReferencia: string, today = new Date()): number {
+  const [year, month] = mesReferencia.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  if (mesReferencia !== currentMonthRef(today)) return lastDay;
+  return Math.max(1, lastDay - today.getDate() + 1);
+}
+
+export interface SubscriptionCandidate {
+  descricao: string;
+  valor: number;
+  categoryId: string | null;
+  meses: string[];
+}
+
+/**
+ * Detecta possíveis assinaturas: mesma descrição + mesmo valor aparecendo em
+ * pelo menos 2 dos meses analisados, como lançamento único (não já marcado
+ * como fixo/parcelado). Puramente informativo — não altera nada sozinho.
+ */
+export function detectSubscriptions(
+  transactions: Transaction[],
+  months: string[]
+): SubscriptionCandidate[] {
+  const byKey = new Map<
+    string,
+    { descricao: string; valor: number; categoryId: string | null; meses: Set<string> }
+  >();
+
+  for (const t of transactions) {
+    if (t.status !== "ativo" || t.tipo !== "despesa" || t.recorrencia !== "unica") continue;
+    const descricao = t.descricao?.trim();
+    if (!descricao) continue;
+
+    const mes = t.data.slice(0, 7);
+    if (!months.includes(mes)) continue;
+
+    const key = `${descricao.toLowerCase()}|${t.valor.toFixed(2)}`;
+    if (!byKey.has(key)) {
+      byKey.set(key, { descricao, valor: t.valor, categoryId: t.category_id, meses: new Set() });
+    }
+    byKey.get(key)!.meses.add(mes);
+  }
+
+  return Array.from(byKey.values())
+    .filter((v) => v.meses.size >= Math.min(2, months.length))
+    .map((v) => ({
+      descricao: v.descricao,
+      valor: v.valor,
+      categoryId: v.categoryId,
+      meses: Array.from(v.meses).sort(),
+    }))
+    .sort((a, b) => b.meses.length - a.meses.length);
+}
+
+/**
  * Soma apenas lançamentos já registrados (recorrentes/parcelados incluídos)
  * com data entre amanhã e o fim do mês — nunca extrapola uma média. Se não
  * há nada agendado, a projeção é igual ao saldo atual.

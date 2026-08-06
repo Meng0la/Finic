@@ -1,7 +1,9 @@
-import { getAccounts, getCategories, getTransactions } from "@/lib/data";
+import Link from "next/link";
+import { getAccounts, getBillPayments, getBills, getCategories, getTransactions } from "@/lib/data";
 import {
   consolidatedBalance,
   currentMonthRef,
+  detectSubscriptions,
   formatBRL,
   lastMonths,
   monthRange,
@@ -16,6 +18,7 @@ import {
   MonthlyComparisonChart,
   NetWorthChart,
 } from "@/components/dashboard/DashboardCharts";
+import { SubscriptionsCard } from "@/components/dashboard/SubscriptionsCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LuxuryAurora } from "@/components/brand/LuxuryAurora";
 
@@ -40,12 +43,15 @@ export default async function DashboardPage() {
   const months = lastMonths(6);
   const rangeStart = `${months[0]}-01`;
 
-  const [accounts, categories, transactionsAllTime, transactionsRange] = await Promise.all([
-    getAccounts(),
-    getCategories(),
-    getTransactions(),
-    getTransactions({ from: rangeStart, to }),
-  ]);
+  const [accounts, categories, transactionsAllTime, transactionsRange, bills, billPayments] =
+    await Promise.all([
+      getAccounts(),
+      getCategories(),
+      getTransactions(),
+      getTransactions({ from: rangeStart, to }),
+      getBills(),
+      getBillPayments(mes),
+    ]);
 
   const transactionsMes = transactionsRange.filter((t) => t.data >= from && t.data <= to);
 
@@ -55,6 +61,13 @@ export default async function DashboardPage() {
   const distribuicao = spendByCategory(transactionsMes, categories);
   const comparativo = monthlyComparison(transactionsRange, months);
   const evolucaoPatrimonio = netWorthHistory(accounts, transactionsAllTime, months);
+  const assinaturas = detectSubscriptions(transactionsRange, lastMonths(3));
+
+  const hoje = new Date().getDate();
+  const pagas = new Set(billPayments.map((p) => p.bill_id));
+  const contasAVencer = bills
+    .filter((b) => !pagas.has(b.id) && b.dia_vencimento - hoje <= 7)
+    .sort((a, b) => a.dia_vencimento - b.dia_vencimento);
 
   return (
     <div className="flex flex-col gap-8">
@@ -85,6 +98,27 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {contasAVencer.length > 0 && (
+        <div className="surface-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="field-label">Contas a vencer nos próximos 7 dias</h2>
+            <Link href="/contas-a-pagar" className="text-xs text-gold hover:text-gold-strong">
+              ver todas
+            </Link>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {contasAVencer.map((b) => (
+              <li key={b.id} className="flex items-center justify-between text-sm">
+                <span className="text-ink">
+                  {b.nome} <span className="text-ink-muted">· dia {b.dia_vencimento}</span>
+                </span>
+                <span className="font-medium text-ink">{formatBRL(b.valor)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="surface-card p-5">
           <h2 className="field-label mb-4">Gastos por categoria (mês atual)</h2>
@@ -100,6 +134,8 @@ export default async function DashboardPage() {
         <h2 className="field-label mb-4">Evolução do patrimônio (últimos 6 meses)</h2>
         <NetWorthChart data={evolucaoPatrimonio} />
       </div>
+
+      <SubscriptionsCard candidates={assinaturas} categories={categories} />
     </div>
   );
 }
